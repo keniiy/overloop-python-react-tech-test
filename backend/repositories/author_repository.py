@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
@@ -37,6 +37,26 @@ class AuthorRepository(BaseRepository):
                 Author.last_name.ilike(search_pattern)
             )
         ).all()
+    
+    def get_all_paginated(self, offset: int = 0, limit: int = 20) -> Tuple[List[Author], int]:
+        """Get all authors with pagination"""
+        query = self.db_session.query(Author)
+        total = query.count()
+        authors = query.offset(offset).limit(limit).all()
+        return authors, total
+    
+    def search_paginated(self, search_term: str, offset: int = 0, limit: int = 20) -> Tuple[List[Author], int]:
+        """Search authors with pagination"""
+        search_pattern = f"%{search_term}%"
+        query = self.db_session.query(Author).filter(
+            or_(
+                Author.first_name.ilike(search_pattern),
+                Author.last_name.ilike(search_pattern)
+            )
+        )
+        total = query.count()
+        authors = query.offset(offset).limit(limit).all()
+        return authors, total
     
     def get_authors_with_articles(self) -> List[Author]:
         """Get all authors who have written articles"""

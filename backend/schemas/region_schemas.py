@@ -4,6 +4,8 @@ from typing import List
 
 class RegionBase(BaseModel):
     """Base Region schema with common fields"""
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     code: str = Field(..., min_length=2, max_length=2, description="Two-letter region code")
     name: str = Field(..., min_length=2, max_length=200, description="Region name")
     

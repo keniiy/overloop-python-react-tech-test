@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 
@@ -58,7 +58,7 @@ class ArticleRepository(BaseRepository):
                 )
             ).all()
     
-    def create_with_regions(self, title: str, content: str, author_id: int = None, region_ids: List[int] = None) -> Article:
+    def create_with_regions(self, title: str, content: str, author_id: Optional[int] = None, region_ids: Optional[List[int]] = None) -> Article:
         """Create article with author and regions"""
         article = Article(
             title=title,
@@ -83,3 +83,50 @@ class ArticleRepository(BaseRepository):
             article.regions = regions
             self.db_session.flush()
         return article
+    
+    def get_all_paginated(self, offset: int = 0, limit: int = 20) -> Tuple[List[Article], int]:
+        """Get all articles with pagination"""
+        query = self.db_session.query(Article)\
+            .options(joinedload(Article.author))\
+            .options(joinedload(Article.regions))\
+            .order_by(Article.id)
+        total = query.count()
+        articles = query.offset(offset).limit(limit).all()
+        return articles, total
+    
+    def search_paginated(self, search_term: str, offset: int = 0, limit: int = 20) -> Tuple[List[Article], int]:
+        """Search articles with pagination"""
+        search_pattern = f"%{search_term}%"
+        query = self.db_session.query(Article)\
+            .options(joinedload(Article.author))\
+            .options(joinedload(Article.regions))\
+            .filter(
+                or_(
+                    Article.title.ilike(search_pattern),
+                    Article.content.ilike(search_pattern)
+                )
+            ).order_by(Article.id)
+        total = query.count()
+        articles = query.offset(offset).limit(limit).all()
+        return articles, total
+    
+    def get_by_author_paginated(self, author_id: int, offset: int = 0, limit: int = 20) -> Tuple[List[Article], int]:
+        """Get articles by author with pagination"""
+        query = self.db_session.query(Article)\
+            .options(joinedload(Article.regions))\
+            .filter(Article.author_id == author_id)\
+            .order_by(Article.id)
+        total = query.count()
+        articles = query.offset(offset).limit(limit).all()
+        return articles, total
+    
+    def get_by_region_paginated(self, region_id: int, offset: int = 0, limit: int = 20) -> Tuple[List[Article], int]:
+        """Get articles by region with pagination"""
+        query = self.db_session.query(Article)\
+            .options(joinedload(Article.author))\
+            .join(Article.regions)\
+            .filter(Region.id == region_id)\
+            .order_by(Article.id)
+        total = query.count()
+        articles = query.offset(offset).limit(limit).all()
+        return articles, total

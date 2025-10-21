@@ -4,6 +4,8 @@ from typing import Optional, List
 
 class AuthorBase(BaseModel):
     """Base Author schema with common fields"""
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     first_name: str = Field(..., min_length=2, max_length=100, description="Author's first name")
     last_name: str = Field(..., min_length=2, max_length=100, description="Author's last name")
 

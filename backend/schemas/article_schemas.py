@@ -6,6 +6,8 @@ from .region_schemas import RegionResponse
 
 class ArticleBase(BaseModel):
     """Base Article schema with common fields"""
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     title: str = Field(..., min_length=5, max_length=500, description="Article title")
     content: str = Field(..., min_length=10, description="Article content")
 

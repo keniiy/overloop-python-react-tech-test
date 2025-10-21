@@ -1,5 +1,6 @@
 from models.article import Article
 from models.region import Region
+from models.author import Author
 from connector import engine, BaseModel, db_session
 
 BaseModel.metadata.create_all(engine)

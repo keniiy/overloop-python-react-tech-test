@@ -1,10 +1,14 @@
+import json
 from flask import Blueprint, jsonify, request
-from pydantic import ValidationError
-from flask_apispec import marshal_with, doc, use_kwargs
+from pydantic import ValidationError as PydanticValidationError
+from flask_apispec import marshal_with, doc
 from marshmallow import Schema, fields
 
 from api.dependencies import with_services, get_author_service
 from schemas.author_schemas import CreateAuthorRequest, UpdateAuthorRequest
+from schemas.pagination_schemas import PaginationMetaSchema, AuthorFilterParamsSchema
+from core.exceptions import NotFoundError, ValidationError
+from core.pagination import get_pagination_params, get_search_params, PaginatedResponse
 
 authors_bp = Blueprint('authors', __name__)
 
@@ -30,20 +34,36 @@ class UpdateAuthorSchema(Schema):
 class AuthorListSchema(Schema):
     authors = fields.List(fields.Nested(AuthorSchema), required=True)
 
+class PaginatedAuthorListSchema(Schema):
+    data = fields.List(fields.Nested(AuthorSchema), required=True)
+    pagination = fields.Nested(PaginationMetaSchema, required=True)
+
 
 class ErrorSchema(Schema):
     error = fields.Str(required=True, metadata={"description": "Error message"})
 
 
-class SuccessMessageSchema(Schema):
+class AuthorSuccessMessageSchema(Schema):
     message = fields.Str(required=True, metadata={"description": "Success message"})
 
 
 @authors_bp.route('/authors', methods=['GET'])
 @doc(
-    description='Get all authors with optional search functionality',
+    description='Get all authors with pagination and optional search',
     tags=['Authors'],
     params={
+        'page': {
+            'description': 'Page number (1-based)',
+            'type': 'integer',
+            'required': False,
+            'default': 1
+        },
+        'limit': {
+            'description': 'Items per page (1-100)',
+            'type': 'integer', 
+            'required': False,
+            'default': 20
+        },
         'search': {
             'description': 'Search term to filter authors by name',
             'type': 'string',
@@ -52,8 +72,12 @@ class SuccessMessageSchema(Schema):
     },
     responses={
         200: {
-            'description': 'List of authors',
-            'schema': AuthorListSchema
+            'description': 'Paginated list of authors',
+            'schema': PaginatedAuthorListSchema
+        },
+        400: {
+            'description': 'Bad request - invalid parameters',
+            'schema': ErrorSchema
         },
         500: {
             'description': 'Internal server error',
@@ -61,26 +85,35 @@ class SuccessMessageSchema(Schema):
         }
     }
 )
-@marshal_with(AuthorListSchema)
+@marshal_with(PaginatedAuthorListSchema)
 @with_services
 def get_authors():
-    """Get all authors"""
-    try:
-        search_term = request.args.get('search', '').strip()
-        author_service = get_author_service()
-        
-        if search_term:
-            authors = author_service.search_authors(search_term)
-        else:
-            authors = author_service.get_all_authors()
-        
-        # Convert Pydantic models to dict for JSON response
-        return {
-            'authors': [author.model_dump() for author in authors]
-        }
+    """Get all authors with pagination"""
+    # Get and validate pagination parameters
+    pagination = get_pagination_params()
+    search = get_search_params()
     
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    author_service = get_author_service()
+    
+    # Get paginated results
+    if search.search:
+        authors, total = author_service.search_authors_paginated(
+            search.search, pagination.offset, pagination.limit
+        )
+    else:
+        authors, total = author_service.get_all_authors_paginated(
+            pagination.offset, pagination.limit
+        )
+    
+    # Convert to dict and create paginated response
+    author_data = [author.model_dump() for author in authors]
+    return PaginatedResponse.create(
+        data=author_data,
+        total=total,
+        page=pagination.page,
+        limit=pagination.limit,
+        search=search.search
+    )
 
 
 @authors_bp.route('/authors', methods=['POST'])
@@ -102,20 +135,23 @@ def get_authors():
         }
     }
 )
-@use_kwargs(CreateAuthorSchema, location="json")
 @marshal_with(AuthorSchema, code=201)
 @with_services
 def create_author():
     """Create new author with Pydantic validation"""
     try:
         if not request.is_json:
-            return jsonify({'error': 'Request must be JSON'}), 400
-        
+            raise ValidationError('Request must be JSON')
+
+        payload = request.get_json(silent=True)
+        if payload is None:
+            raise ValidationError('Request must be JSON')
+
         # Validate request data with Pydantic
         try:
-            author_request = CreateAuthorRequest.model_validate(request.get_json())
-        except ValidationError as e:
-            return jsonify({'error': 'Validation failed', 'details': e.errors()}), 400
+            author_request = CreateAuthorRequest.model_validate(payload)
+        except PydanticValidationError as e:
+            raise ValidationError('Validation failed', {'details': json.loads(e.json())})
         
         author_service = get_author_service()
         author = author_service.create_author(author_request)
@@ -123,9 +159,7 @@ def create_author():
         return author.model_dump(), 201
     
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        raise ValidationError(str(e))
 
 
 @authors_bp.route('/authors/<int:author_id>', methods=['GET'])
@@ -158,17 +192,13 @@ def create_author():
 @with_services
 def get_author(author_id):
     """Get author by ID"""
-    try:
-        author_service = get_author_service()
-        author = author_service.get_author_by_id(author_id)
-        
-        if not author:
-            return jsonify({'error': 'Author not found'}), 404
-        
-        return author.model_dump()
+    author_service = get_author_service()
+    author = author_service.get_author_by_id(author_id)
     
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    if not author:
+        raise NotFoundError('Author not found')
+    
+    return author.model_dump()
 
 
 @authors_bp.route('/authors/<int:author_id>', methods=['PUT'])
@@ -201,29 +231,34 @@ def get_author(author_id):
         }
     }
 )
-@use_kwargs(UpdateAuthorSchema, location="json")
 @marshal_with(AuthorSchema)
 @with_services
 def update_author(author_id):
     """Update author"""
+    if not request.is_json:
+        raise ValidationError('Request must be JSON')
+
+    payload = request.get_json(silent=True)
+    if payload is None:
+        raise ValidationError('Request must be JSON')
+
+    # Create Pydantic model from kwargs
     try:
-        if not request.is_json:
-            return jsonify({'error': 'Request must be JSON'}), 400
+        author_request = UpdateAuthorRequest.model_validate(payload)
+    except PydanticValidationError as e:
+        raise ValidationError('Validation failed', {'details': json.loads(e.json())})
         
-        author_data = request.get_json()
-        author_service = get_author_service()
-        
-        author = author_service.update_author(author_id, author_data)
-        
-        if not author:
-            return jsonify({'error': 'Author not found'}), 404
-        
-        return author
+    author_service = get_author_service()
     
+    try:
+        author = author_service.update_author(author_id, author_request)
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        raise ValidationError(str(e))
+    
+    if not author:
+        raise NotFoundError('Author not found')
+
+    return author.model_dump()
 
 
 @authors_bp.route('/authors/<int:author_id>', methods=['DELETE'])
@@ -240,7 +275,7 @@ def update_author(author_id):
     responses={
         200: {
             'description': 'Author deleted successfully',
-            'schema': SuccessMessageSchema
+            'schema': AuthorSuccessMessageSchema
         },
         404: {
             'description': 'Author not found',
@@ -256,7 +291,7 @@ def update_author(author_id):
         }
     }
 )
-@marshal_with(SuccessMessageSchema)
+@marshal_with(AuthorSuccessMessageSchema)
 @with_services
 def delete_author(author_id):
     """Delete author"""
@@ -266,22 +301,16 @@ def delete_author(author_id):
         if author_service.delete_author(author_id):
             return {'message': 'Author deleted successfully'}
         else:
-            return jsonify({'error': 'Author not found'}), 404
+            raise NotFoundError('Author not found')
     
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        raise ValidationError(str(e))
 
 
 @authors_bp.route('/authors/with-stats', methods=['GET'])
 @with_services
 def get_authors_with_stats():
     """Get all authors with article count"""
-    try:
-        author_service = get_author_service()
-        authors = author_service.get_authors_with_article_count()
-        return jsonify(authors)
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    author_service = get_author_service()
+    authors = author_service.get_authors_with_article_count()
+    return authors

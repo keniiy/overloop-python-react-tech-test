@@ -1,6 +1,9 @@
 import pytest
 import tempfile
 import os
+import sys
+sys.path.append('.')
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from connector import BaseModel

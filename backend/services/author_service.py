@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from repositories.author_repository import AuthorRepository
 from models.author import Author
 from schemas.author_schemas import (
@@ -20,12 +20,18 @@ class AuthorService(LoggerMixin):
     def get_all_authors(self) -> List[AuthorResponse]:
         """Get all authors with proper typing"""
         authors = self.author_repository.get_all()
-        return [AuthorResponse.model_validate(author) for author in authors]
+        return [AuthorResponse.model_validate(author.serialize()) for author in authors]
+    
+    def get_all_authors_paginated(self, offset: int = 0, limit: int = 20) -> Tuple[List[AuthorResponse], int]:
+        """Get all authors with pagination"""
+        authors, total = self.author_repository.get_all_paginated(offset, limit)
+        author_responses = [AuthorResponse.model_validate(author.serialize()) for author in authors]
+        return author_responses, total
     
     def get_author_by_id(self, author_id: int) -> Optional[AuthorResponse]:
         """Get author by ID with proper typing"""
         author = self.author_repository.get_by_id(author_id)
-        return AuthorResponse.model_validate(author) if author else None
+        return AuthorResponse.model_validate(author.serialize()) if author else None
     
     def create_author(self, author_data: CreateAuthorRequest) -> AuthorResponse:
         """Create new author with validation"""
@@ -49,7 +55,7 @@ class AuthorService(LoggerMixin):
         log_database_operation("CREATE", "author", author.id, {"name": f"{first_name} {last_name}"})
         self.logger.info(f"Successfully created author with ID: {author.id}")
         
-        return AuthorResponse.model_validate(author)
+        return AuthorResponse.model_validate(author.serialize())
     
     def update_author(self, author_id: int, author_data: UpdateAuthorRequest) -> Optional[AuthorResponse]:
         """Update existing author"""
@@ -72,7 +78,7 @@ class AuthorService(LoggerMixin):
             last_name=last_name
         )
         
-        return AuthorResponse.model_validate(author) if author else None
+        return AuthorResponse.model_validate(author.serialize()) if author else None
     
     def delete_author(self, author_id: int) -> bool:
         """Delete author if they have no articles"""
@@ -92,7 +98,16 @@ class AuthorService(LoggerMixin):
             return self.get_all_authors()
         
         authors = self.author_repository.search(search_term.strip())
-        return [AuthorResponse.model_validate(author) for author in authors]
+        return [AuthorResponse.model_validate(author.serialize()) for author in authors]
+    
+    def search_authors_paginated(self, search_term: str, offset: int = 0, limit: int = 20) -> Tuple[List[AuthorResponse], int]:
+        """Search authors by name with pagination"""
+        if not search_term or not search_term.strip():
+            return self.get_all_authors_paginated(offset, limit)
+        
+        authors, total = self.author_repository.search_paginated(search_term.strip(), offset, limit)
+        author_responses = [AuthorResponse.model_validate(author.serialize()) for author in authors]
+        return author_responses, total
     
     def get_authors_with_article_count(self) -> List[AuthorWithStatsResponse]:
         """Get all authors with their article count"""
@@ -100,7 +115,7 @@ class AuthorService(LoggerMixin):
         result = []
         
         for author in authors:
-            author_data = AuthorResponse.model_validate(author).model_dump()
+            author_data = AuthorResponse.model_validate(author.serialize()).model_dump()
             author_data['article_count'] = len(author.articles) if hasattr(author, 'articles') and author.articles else 0
             result.append(AuthorWithStatsResponse.model_validate(author_data))
         

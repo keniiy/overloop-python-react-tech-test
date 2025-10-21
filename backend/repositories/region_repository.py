@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from models.region import Region
@@ -48,3 +48,20 @@ class RegionRepository(BaseRepository):
             errors.append("Region name must be less than 200 characters")
         
         return errors
+    
+    def get_all_paginated(self, offset: int = 0, limit: int = 20) -> Tuple[List[Region], int]:
+        """Get all regions with pagination"""
+        query = self.db_session.query(Region).order_by(Region.id)
+        total = query.count()
+        regions = query.offset(offset).limit(limit).all()
+        return regions, total
+    
+    def search_paginated(self, search_term: str, offset: int = 0, limit: int = 20) -> Tuple[List[Region], int]:
+        """Search regions with pagination"""
+        search_pattern = f"%{search_term}%"
+        query = self.db_session.query(Region).filter(
+            Region.name.ilike(search_pattern)
+        ).order_by(Region.id)
+        total = query.count()
+        regions = query.offset(offset).limit(limit).all()
+        return regions, total

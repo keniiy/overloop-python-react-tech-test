@@ -90,11 +90,44 @@ docs.register(health)
 
 # Register all blueprint endpoints with documentation
 from routes.authors import get_authors, create_author, get_author, update_author, delete_author
+from routes.articles import get_articles, create_article, get_article, update_article, delete_article  
+from routes.regions import get_regions, create_region, get_region, update_region, delete_region
+
 docs.register(get_authors, blueprint='authors')
 docs.register(create_author, blueprint='authors')
 docs.register(get_author, blueprint='authors')
 docs.register(update_author, blueprint='authors')
 docs.register(delete_author, blueprint='authors')
+
+docs.register(get_articles, blueprint='articles')
+docs.register(create_article, blueprint='articles')
+docs.register(get_article, blueprint='articles')
+docs.register(update_article, blueprint='articles')
+docs.register(delete_article, blueprint='articles')
+
+docs.register(get_regions, blueprint='regions')
+docs.register(create_region, blueprint='regions')
+docs.register(get_region, blueprint='regions')
+docs.register(update_region, blueprint='regions')
+docs.register(delete_region, blueprint='regions')
+
+
+# Error Handlers for custom exceptions
+from core.exceptions import NotFoundError, ValidationError, ConflictError, DatabaseError
+
+@app.errorhandler(NotFoundError)
+def handle_not_found_error(e):
+    return {'error': e.message, 'details': e.details}, 404
+
+@app.errorhandler(ValidationError)  
+def handle_validation_error(e):
+    return {'error': e.message, 'details': e.details}, 400
+
+@app.errorhandler(ConflictError)
+def handle_conflict_error(e):
+    return {'error': e.message, 'details': e.details}, 409
+
+
 
 
 @app.route('/swagger/')
@@ -144,4 +177,11 @@ def _get_port():
 
 if __name__ == '__main__':
     debug = os.environ.get('FLASK_DEBUG', '0') not in ('0', 'false', 'False')
-    app.run(host='0.0.0.0', port=_get_port(), debug=debug)
+    port = _get_port()
+    
+    print(f"\n🚀 Server starting on http://0.0.0.0:{port}")
+    print(f"📚 Swagger UI available at: http://localhost:{port}/docs/")
+    print(f"🔧 Swagger JSON spec at: http://localhost:{port}/swagger/")
+    print(f"❤️  Health check at: http://localhost:{port}/health\n")
+    
+    app.run(host='0.0.0.0', port=port, debug=debug)

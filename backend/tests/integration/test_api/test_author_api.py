@@ -1,42 +1,5 @@
 import pytest
 import json
-import tempfile
-import os
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from baseapp import create_app
-from connector import BaseModel
-
-
-@pytest.fixture
-def app():
-    """Create test Flask app"""
-    # Create temporary database file
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    temp_file.close()
-    
-    test_config = {
-        'TESTING': True,
-        'DATABASE_URL': f'sqlite:///{temp_file.name}'
-    }
-    
-    app = create_app(test_config)
-    
-    with app.app_context():
-        # Set up test database
-        engine = create_engine(f'sqlite:///{temp_file.name}')
-        BaseModel.metadata.create_all(engine)
-        
-        yield app
-        
-        # Cleanup
-        os.unlink(temp_file.name)
-
-
-@pytest.fixture
-def client(app):
-    """Create test client"""
-    return app.test_client()
 
 
 @pytest.mark.integration
@@ -97,15 +60,26 @@ class TestAuthorAPI:
         
         assert response.status_code == 400
     
-    def test_get_all_authors_empty(self, client):
-        """Test getting all authors when none exist"""
+    def test_get_all_authors_structure(self, client):
+        """Test getting all authors returns correct structure"""
         response = client.get('/authors')
         
         assert response.status_code == 200
         
         response_data = json.loads(response.data)
-        assert isinstance(response_data, list)
-        assert len(response_data) == 0
+        assert isinstance(response_data, dict)
+        assert 'data' in response_data
+        assert 'pagination' in response_data
+        assert isinstance(response_data['data'], list)
+        
+        # Check pagination structure
+        pagination = response_data['pagination']
+        assert 'current_page' in pagination
+        assert 'per_page' in pagination
+        assert 'total_items' in pagination
+        assert 'total_pages' in pagination
+        assert 'has_next' in pagination
+        assert 'has_prev' in pagination
     
     def test_get_all_authors_with_data(self, client):
         """Test getting all authors when some exist"""
@@ -128,12 +102,15 @@ class TestAuthorAPI:
         assert response.status_code == 200
         
         response_data = json.loads(response.data)
-        assert isinstance(response_data, list)
-        assert len(response_data) >= 1
+        assert isinstance(response_data, dict)
+        assert 'data' in response_data
+        assert 'pagination' in response_data
+        assert isinstance(response_data['data'], list)
+        assert len(response_data['data']) >= 1
         
         # Check that our created author is in the list
         created_author = json.loads(create_response.data)
-        assert any(author["id"] == created_author["id"] for author in response_data)
+        assert any(author["id"] == created_author["id"] for author in response_data['data'])
     
     def test_get_author_by_id_success(self, client):
         """Test getting author by valid ID"""
@@ -265,7 +242,9 @@ class TestAuthorAPI:
         # Then delete the author
         response = client.delete(f'/authors/{created_author["id"]}')
         
-        assert response.status_code == 204
+        assert response.status_code == 200
+        response_data = json.loads(response.data)
+        assert 'message' in response_data
         
         # Verify author is deleted
         get_response = client.get(f'/authors/{created_author["id"]}')
@@ -293,17 +272,20 @@ class TestAuthorAPI:
                 content_type='application/json'
             )
         
-        # Search for "John"
-        response = client.get('/authors/search?q=John')
+        # Search for "John" using new pagination endpoint
+        response = client.get('/authors?search=John')
         
         assert response.status_code == 200
         
         response_data = json.loads(response.data)
-        assert isinstance(response_data, list)
-        assert len(response_data) >= 1
+        assert isinstance(response_data, dict)
+        assert 'data' in response_data
+        assert 'pagination' in response_data
+        assert isinstance(response_data['data'], list)
+        assert len(response_data['data']) >= 1
         
         # Should find both "John Doe" and "Bob Johnson"
-        found_names = [f"{author['first_name']} {author['last_name']}" for author in response_data]
+        found_names = [f"{author['first_name']} {author['last_name']}" for author in response_data['data']]
         assert any("John" in name for name in found_names)
     
     def test_content_type_validation(self, client):
@@ -322,3 +304,63 @@ class TestAuthorAPI:
         
         # Should either work or return 400/415 depending on implementation
         assert response.status_code in [201, 400, 415]
+    
+    def test_pagination_parameters(self, client):
+        """Test pagination parameters work correctly"""
+        # Create multiple authors
+        for i in range(5):
+            author_data = {
+                "first_name": f"Author{i}",
+                "last_name": f"Test{i}"
+            }
+            client.post(
+                '/authors',
+                data=json.dumps(author_data),
+                content_type='application/json'
+            )
+        
+        # Test page size limit
+        response = client.get('/authors?limit=2')
+        assert response.status_code == 200
+        
+        response_data = json.loads(response.data)
+        assert len(response_data['data']) <= 2
+        assert response_data['pagination']['per_page'] == 2
+        assert response_data['pagination']['current_page'] == 1
+        
+        # Test page 2
+        response = client.get('/authors?page=2&limit=2')
+        assert response.status_code == 200
+        
+        response_data = json.loads(response.data)
+        assert response_data['pagination']['current_page'] == 2
+        assert response_data['pagination']['per_page'] == 2
+    
+    def test_pagination_metadata(self, client):
+        """Test pagination metadata is correct"""
+        # Create exactly 3 authors
+        for i in range(3):
+            author_data = {
+                "first_name": f"Test{i}",
+                "last_name": f"Author{i}"
+            }
+            client.post(
+                '/authors',
+                data=json.dumps(author_data),
+                content_type='application/json'
+            )
+        
+        response = client.get('/authors?limit=2')
+        assert response.status_code == 200
+        
+        response_data = json.loads(response.data)
+        pagination = response_data['pagination']
+        
+        assert pagination['total_items'] == 3
+        assert pagination['per_page'] == 2
+        assert pagination['total_pages'] == 2
+        assert pagination['current_page'] == 1
+        assert pagination['has_next'] == True
+        assert pagination['has_prev'] == False
+        assert pagination['next_page'] == 2
+        assert pagination['prev_page'] is None

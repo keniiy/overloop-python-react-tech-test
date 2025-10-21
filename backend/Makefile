@@ -60,7 +60,7 @@ test-integration: ## Run integration tests only
 
 test-coverage: ## Run tests with coverage report
 	@echo "$(BLUE)Running tests with coverage...$(RESET)"
-	$(PYTEST) --cov=techtest --cov-report=html --cov-report=term-missing
+	$(PYTEST) --cov=. --cov-report=html --cov-report=term-missing --cov-config=.coveragerc
 	@echo "$(GREEN)✓ Coverage report generated in htmlcov/$(RESET)"
 
 test-watch: ## Run tests in watch mode
@@ -70,20 +70,20 @@ test-watch: ## Run tests in watch mode
 # Code Quality
 
 lint:
-	poetry run flake8 techtest/ --max-line-length=120
+	poetry run flake8 . --max-line-length=120 --exclude=tests,htmlcov,.git,__pycache__,.pytest_cache
 
 format:
-	poetry run isort techtest/
-	poetry run black techtest/
+	poetry run isort .
+	poetry run black .
 
 format-check: ## Check code formatting
 	@echo "$(BLUE)Checking code formatting...$(RESET)"
-	$(BLACK) techtest/ --check
-	$(ISORT) techtest/ --check-only
+	$(BLACK) . --check
+	$(ISORT) . --check-only
 
 type-check: ## Run type checking with mypy
 	@echo "$(BLUE)Running type checks...$(RESET)"
-	$(POETRY) run mypy techtest/
+	$(POETRY) run mypy . --ignore-missing-imports
 	@echo "$(GREEN)✓ Type checking complete$(RESET)"
 
 check: lint format-check type-check test ## Run all quality checks
