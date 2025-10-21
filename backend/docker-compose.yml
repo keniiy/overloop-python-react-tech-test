@@ -1,7 +1,8 @@
-version: '3.8'
+name: over-loop
+version: "3.8"
 
 services:
-  # PostgreSQL database
+  # PostgreSQL (main)
   postgres:
     image: postgres:15-alpine
     container_name: overloop-postgres
@@ -20,8 +21,10 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - overloop-network
 
-  # PostgreSQL for testing (separate database)
+  # PostgreSQL (test)
   postgres-test:
     image: postgres:15-alpine
     container_name: overloop-postgres-test
@@ -35,12 +38,15 @@ services:
     volumes:
       - postgres_test_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U techtest_user -d overloop_techtest_test"]
+      test:
+        ["CMD-SHELL", "pg_isready -U techtest_user -d overloop_techtest_test"]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - overloop-network
 
-  # Redis for caching (optional, for future use)
+  # Redis cache
   redis:
     image: redis:7-alpine
     container_name: overloop-redis
@@ -53,27 +59,10 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - overloop-network
 
-  # Backend application
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: overloop-backend
-    environment:
-      DATABASE_URL: postgresql://techtest_user:techtest_password@postgres:5432/overloop_techtest
-      FLASK_ENV: development
-      FLASK_DEBUG: 1
-    ports:
-      - "5000:5000"
-    volumes:
-      - .:/app
-      - /app/.venv  # Exclude virtual environment from volume mount
-    depends_on:
-      postgres:
-        condition: service_healthy
-    command: poetry run python app.py
-
+# Persistent storage
 volumes:
   postgres_data:
     driver: local
@@ -81,3 +70,8 @@ volumes:
     driver: local
   redis_data:
     driver: local
+
+# Shared network
+networks:
+  overloop-network:
+    driver: bridge

@@ -34,10 +34,10 @@ In both cases, the modules are loaded by using the `__all__` variable in `__init
 - Add a new entity called `Author` with a `first_name` and a `last_name`. An API user should be able to create a new `Author`, edit an existing one and list all existing ones.
 - Update the `Article` entity so that it relates to an `Author`. An API user should be able to select an `Author` and/or `Region` when creating or editing an `Article`.
 - An API user should be able to perform the following actions for each `Article`, `Author` and `Region` entity:
-    - Get all entities (the route for this already exists for `Article` in /techtest/routes/articles.py and for `Region` in /techtest/routes/regions.py)
-    - Create a single entity
-    - Get a single entity
-    - Update a single entity
-    - Delete a single entity
+- Get all entities (the route for this already exists for `Article` in /techtest/routes/articles.py and for `Region` in /techtest/routes/regions.py)
+- Create a single entity
+- Get a single entity
+- Update a single entity
+- Delete a single entity
 - The app should be robust and you should make sure that everything works as specified.
 - Add unit tests for any code written to implement the tasks using a testing framework of your choice.

@@ -1,10 +1,6 @@
 # Overloop Tech Test Backend - Makefile
-# Professional development workflow automation
 
-.PHONY: help install install-dev setup clean test test-coverage lint format check run docker-build docker-run
-
-# Default target
-.DEFAULT_GOAL := help
+.PHONY: install install-dev run run-prod test lint format compose-up compose-down
 
 # Colors for output
 RED    := \033[31m
@@ -23,22 +19,14 @@ BLACK := $(POETRY) run black
 FLAKE8 := $(POETRY) run flake8
 ISORT := $(POETRY) run isort
 
-help: ## Show this help message
-	@echo "$(BLUE)$(PROJECT_NAME) - Available Commands$(RESET)"
-	@echo ""
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
-		awk 'BEGIN {FS = ":.*?## "}; {printf "$(GREEN)%-20s$(RESET) %s\n", $$1, $$2}'
 
 # Environment Setup
-install: ## Install production dependencies only
-	@echo "$(BLUE)Installing production dependencies...$(RESET)"
-	$(POETRY) install --only main
-	@echo "$(GREEN)✓ Production dependencies installed$(RESET)"
 
-install-dev: ## Install all dependencies including dev
-	@echo "$(BLUE)Installing all dependencies...$(RESET)"
-	$(POETRY) install
-	@echo "$(GREEN)✓ All dependencies installed$(RESET)"
+install:
+	poetry install --only main
+
+install-dev:
+	poetry install
 
 setup: install-dev setup-db ## Complete project setup
 	@echo "$(GREEN)✓ Project setup complete!$(RESET)"
@@ -48,31 +36,19 @@ setup-db: ## Setup and seed database
 	$(PYTHON) setup_and_seed.py
 	@echo "$(GREEN)✓ Database setup complete$(RESET)"
 
-poetry-install: ## Install Poetry if not present
-	@echo "$(BLUE)Checking Poetry installation...$(RESET)"
-	@command -v poetry >/dev/null 2>&1 || { \
-		echo "$(YELLOW)Poetry not found. Installing...$(RESET)"; \
-		curl -sSL https://install.python-poetry.org | python3 -; \
-	}
-	@echo "$(GREEN)✓ Poetry ready$(RESET)"
-
-poetry-shell: ## Activate Poetry shell
-	@echo "$(BLUE)Activating Poetry shell...$(RESET)"
-	$(POETRY) shell
 
 # Development
-run: ## Run the Flask development server
-	@echo "$(BLUE)Starting Flask development server...$(RESET)"
-	$(PYTHON) app.py
 
-run-prod: ## Run in production mode
-	@echo "$(BLUE)Starting Flask production server...$(RESET)"
-	FLASK_ENV=production $(PYTHON) app.py
+run:
+	poetry run python app.py
+
+run-prod:
+	FLASK_ENV=production poetry run python app.py
 
 # Testing
-test: ## Run all tests
-	@echo "$(BLUE)Running tests...$(RESET)"
-	$(PYTEST) -v
+
+test:
+	poetry run pytest -v
 
 test-unit: ## Run unit tests only
 	@echo "$(BLUE)Running unit tests...$(RESET)"
@@ -92,16 +68,13 @@ test-watch: ## Run tests in watch mode
 	$(POETRY) run ptw
 
 # Code Quality
-lint: ## Run linting checks
-	@echo "$(BLUE)Running linting checks...$(RESET)"
-	$(FLAKE8) techtest/ --max-line-length=120
-	@echo "$(GREEN)✓ Linting complete$(RESET)"
 
-format: ## Format code with black and isort
-	@echo "$(BLUE)Formatting code...$(RESET)"
-	$(ISORT) techtest/
-	$(BLACK) techtest/
-	@echo "$(GREEN)✓ Code formatted$(RESET)"
+lint:
+	poetry run flake8 techtest/ --max-line-length=120
+
+format:
+	poetry run isort techtest/
+	poetry run black techtest/
 
 format-check: ## Check code formatting
 	@echo "$(BLUE)Checking code formatting...$(RESET)"
@@ -117,23 +90,6 @@ check: lint format-check type-check test ## Run all quality checks
 	@echo "$(GREEN)✓ All quality checks passed!$(RESET)"
 
 # API Testing
-api-test: ## Test API endpoints manually
-	@echo "$(BLUE)Testing API endpoints...$(RESET)"
-	@echo "$(YELLOW)Testing GET /articles...$(RESET)"
-	curl -s http://localhost:5000/articles || echo "$(RED)Server not running$(RESET)"
-	@echo ""
-	@echo "$(YELLOW)Testing GET /authors...$(RESET)"
-	curl -s http://localhost:5000/authors || echo "$(RED)Server not running$(RESET)"
-	@echo ""
-	@echo "$(YELLOW)Testing GET /regions...$(RESET)"
-	curl -s http://localhost:5000/regions || echo "$(RED)Server not running$(RESET)"
-
-api-create-author: ## Create a test author
-	@echo "$(BLUE)Creating test author...$(RESET)"
-	curl -X POST http://localhost:5000/authors \
-		-H "Content-Type: application/json" \
-		-d '{"first_name": "Test", "last_name": "Author"}' || \
-		echo "$(RED)Failed to create author$(RESET)"
 
 # Docker & Docker Compose
 docker-build: ## Build Docker image
@@ -151,20 +107,15 @@ docker-clean: ## Clean Docker images
 	@echo "$(GREEN)✓ Docker images cleaned$(RESET)"
 
 # Docker Compose Commands
-compose-up: ## Start all services with Docker Compose
-	@echo "$(BLUE)Starting services with Docker Compose...$(RESET)"
+
+compose-up:
 	docker-compose up -d
-	@echo "$(GREEN)✓ Services started$(RESET)"
 
 compose-up-build: ## Build and start all services
-	@echo "$(BLUE)Building and starting services...$(RESET)"
 	docker-compose up -d --build
-	@echo "$(GREEN)✓ Services built and started$(RESET)"
 
-compose-down: ## Stop all services
-	@echo "$(BLUE)Stopping services...$(RESET)"
+compose-down:
 	docker-compose down
-	@echo "$(GREEN)✓ Services stopped$(RESET)"
 
 compose-logs: ## View logs from all services
 	@echo "$(BLUE)Viewing service logs...$(RESET)"
@@ -215,10 +166,6 @@ db-reset: ## Reset database
 	$(PYTHON) setup_and_seed.py
 	@echo "$(GREEN)✓ Database reset complete$(RESET)"
 
-db-migrate: ## Run database migrations (if applicable)
-	@echo "$(BLUE)Running database migrations...$(RESET)"
-	# Add migration commands here if using Alembic
-	@echo "$(YELLOW)No migrations configured yet$(RESET)"
 
 # Cleanup
 clean: ## Clean temporary files
@@ -235,33 +182,13 @@ clean-all: clean docker-clean ## Clean everything including Docker
 	@echo "$(GREEN)✓ Complete cleanup finished$(RESET)"
 
 # Development workflow
-dev-setup: poetry-install ## Quick development environment setup
-	@echo "$(BLUE)Setting up development environment...$(RESET)"
-	@echo "$(YELLOW)1. Run: make install-dev$(RESET)"
-	@echo "$(YELLOW)2. Run: make setup-db$(RESET)"
-	@echo "$(YELLOW)3. Run: make run$(RESET)"
-	@echo "$(GREEN)✓ Poetry will automatically manage virtual environment!$(RESET)"
+dev-setup: install-dev setup-db
 
 dev-check: format lint type-check test ## Quick development check
 	@echo "$(GREEN)✓ Development check complete!$(RESET)"
 
 # CI/CD helpers
-ci-install: ## Install dependencies for CI
-	$(POETRY) install --only main
-
-ci-test: ## Run tests for CI environment
-	$(PYTEST) --junitxml=test-results.xml --cov=techtest --cov-report=xml
 
 # Documentation
-docs: ## Generate API documentation
-	@echo "$(BLUE)Generating API documentation...$(RESET)"
-	@echo "$(YELLOW)Documentation generation not configured yet$(RESET)"
 
 # Info
-info: ## Show project information
-	@echo "$(BLUE)Project Information$(RESET)"
-	@echo "Name: $(PROJECT_NAME)"
-	@echo "Python: $(shell $(PYTHON) --version)"
-	@echo "Pip: $(shell $(PIP) --version)"
-	@echo "Working Directory: $(shell pwd)"
-	@echo "Requirements: $(REQUIREMENTS)"
