@@ -9,17 +9,17 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 ## Running
 
- - Start the app: `npm start`
+- Start the app: `npm start`
 
-Runs the app in the development mode.<br />
+Runs the app in the development mode.
 Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
-The page will reload if you make edits.<br />
+The page will reload if you make edits.
 You will also see any lint errors in the console.
 
 ## Tasks
 
-- Add a new entity called `Author` with a first name and a last name. 
+- Add a new entity called `Author` with a first name and a last name.
 You will see that this entity is already supported by the backend.
 - A user should be able to create a new `Author`, edit an existing one and list all existing ones.
 - A user should be able to select an `Author` when creating or editing an `Article`.

@@ -11,9 +11,9 @@ import {
     ROUTE_AUTHOR_CREATE,
     ROUTE_AUTHOR_EDIT
 } from '../../constants';
-import ArticleList from '../../pages/ArticleList/ArticleList';
-import ArticleCreate from '../../pages/ArticleCreate/ArticleCreate';
-import ArticleEdit from '../../pages/ArticleEdit/ArticleEdit';
+import ArticleList from '../../pages/Articles/ArticleList/ArticleList';
+import ArticleCreate from '../../pages/Articles/ArticleCreate/ArticleCreate';
+import ArticleEdit from '../../pages/Articles/ArticleEdit/ArticleEdit';
 import AuthorList from '../../pages/Authors/AuthorList/AuthorList';
 import AuthorCreate from '../../pages/Authors/AuthorCreate/AuthorCreate';
 import AuthorEdit from '../../pages/Authors/AuthorEdit/AuthorEdit';
