@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    container_name: overloop-postgres
+    environment:
+      POSTGRES_DB: overloop_techtest
+      POSTGRES_USER: techtest_user
+      POSTGRES_PASSWORD: techtest_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U techtest_user -d overloop_techtest"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL for testing (separate database)
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: overloop-postgres-test
+    environment:
+      POSTGRES_DB: overloop_techtest_test
+      POSTGRES_USER: techtest_user
+      POSTGRES_PASSWORD: techtest_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U techtest_user -d overloop_techtest_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching (optional, for future use)
+  redis:
+    image: redis:7-alpine
+    container_name: overloop-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Backend application
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: overloop-backend
+    environment:
+      DATABASE_URL: postgresql://techtest_user:techtest_password@postgres:5432/overloop_techtest
+      FLASK_ENV: development
+      FLASK_DEBUG: 1
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      - /app/.venv  # Exclude virtual environment from volume mount
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: poetry run python app.py
+
+volumes:
+  postgres_data:
+    driver: local
+  postgres_test_data:
+    driver: local
+  redis_data:
+    driver: local
