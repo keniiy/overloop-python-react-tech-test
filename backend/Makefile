@@ -33,7 +33,7 @@ setup: install-dev setup-db ## Complete project setup
 
 setup-db: ## Setup and seed database
 	@echo "$(BLUE)Setting up database...$(RESET)"
-	$(PYTHON) setup_and_seed.py
+	$(PYTHON) -m scripts.setup_db
 	@echo "$(GREEN)✓ Database setup complete$(RESET)"
 
 
@@ -163,7 +163,7 @@ db-connect-test: ## Connect to the test database
 db-reset: ## Reset database
 	@echo "$(BLUE)Resetting database...$(RESET)"
 	rm -f database.db
-	$(PYTHON) setup_and_seed.py
+	$(PYTHON) -m scripts.setup_db
 	@echo "$(GREEN)✓ Database reset complete$(RESET)"
 
 
