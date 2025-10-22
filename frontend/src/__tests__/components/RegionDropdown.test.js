@@ -26,7 +26,6 @@ describe('RegionDropdown', () => {
     render(<RegionDropdown value={[]} onChange={jest.fn()} />);
 
     await waitFor(() => expect(listRegions).toHaveBeenCalled());
-    const regionsText = await screen.findByText(/regions:/i);
-    expect(regionsText).toHaveTextContent(/europe, asia/i);
+    expect(await screen.findByText(/regions: europe, asia/i)).toBeInTheDocument();
   });
 });
