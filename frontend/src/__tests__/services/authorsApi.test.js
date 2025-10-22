@@ -21,7 +21,9 @@ describe('authorsApi', () => {
 
       const result = await authorsApi.getAll();
 
-      expect(mockedClient.get).toHaveBeenCalledWith('/authors');
+      expect(mockedClient.get).toHaveBeenCalledWith('/authors', {
+        params: { page: undefined, limit: undefined }
+      });
       expect(result).toEqual(mockAuthors);
     });
 
@@ -127,8 +129,8 @@ describe('authorsApi', () => {
 
       const result = await authorsApi.search(searchTerm);
 
-      expect(mockedClient.get).toHaveBeenCalledWith('/authors/search', {
-        params: { q: searchTerm }
+      expect(mockedClient.get).toHaveBeenCalledWith('/authors', {
+        params: { page: undefined, limit: undefined, search: searchTerm }
       });
       expect(result).toEqual(searchResults);
     });
@@ -139,6 +141,9 @@ describe('authorsApi', () => {
 
       const result = await authorsApi.search(searchTerm);
 
+      expect(mockedClient.get).toHaveBeenCalledWith('/authors', {
+        params: { page: undefined, limit: undefined, search: searchTerm }
+      });
       expect(result).toEqual([]);
     });
   });

@@ -12,6 +12,21 @@ const wrapper = ({ children }) => (
   <NotificationProvider>{children}</NotificationProvider>
 );
 
+const buildPaginatedResponse = (data, overrides = {}) => ({
+  data,
+  pagination: {
+    current_page: 1,
+    per_page: 10,
+    total_items: data.length,
+    total_pages: Math.max(1, Math.ceil(data.length / 10)),
+    has_next: false,
+    has_prev: false,
+    next_page: null,
+    prev_page: null,
+    ...overrides,
+  },
+});
+
 describe('useAuthors', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -24,7 +39,7 @@ describe('useAuthors', () => {
         { id: 2, first_name: 'Jane', last_name: 'Smith', full_name: 'Jane Smith' }
       ];
       
-      mockedAuthorsApi.getAll.mockResolvedValue(mockAuthors);
+      mockedAuthorsApi.getAll.mockResolvedValue(buildPaginatedResponse(mockAuthors));
 
       const { result } = renderHook(() => useAuthors(), { wrapper });
 
@@ -38,6 +53,7 @@ describe('useAuthors', () => {
 
       expect(result.current.loading).toBe(false);
       expect(result.current.authors).toEqual(mockAuthors);
+      expect(result.current.pagination.total_items).toBe(mockAuthors.length);
       expect(result.current.error).toBe(null);
       expect(mockedAuthorsApi.getAll).toHaveBeenCalledTimes(1);
     });
@@ -59,7 +75,7 @@ describe('useAuthors', () => {
 
     it('should set loading state correctly', async () => {
       mockedAuthorsApi.getAll.mockImplementation(() => 
-        new Promise(resolve => setTimeout(() => resolve([]), 100))
+        new Promise(resolve => setTimeout(() => resolve(buildPaginatedResponse([])), 100))
       );
 
       const { result } = renderHook(() => useAuthors(), { wrapper });
@@ -78,6 +94,7 @@ describe('useAuthors', () => {
       const createdAuthor = { id: 3, ...newAuthorData, full_name: 'Bob Johnson' };
       
       mockedAuthorsApi.create.mockResolvedValue(createdAuthor);
+      mockedAuthorsApi.getAll.mockResolvedValue(buildPaginatedResponse([createdAuthor]));
 
       const { result } = renderHook(() => useAuthors(), { wrapper });
 
@@ -86,8 +103,9 @@ describe('useAuthors', () => {
         returnedAuthor = await result.current.createAuthor(newAuthorData);
       });
 
-      expect(result.current.authors).toContain(createdAuthor);
+      expect(result.current.authors).toEqual([createdAuthor]);
       expect(returnedAuthor).toEqual(createdAuthor);
+      expect(mockedAuthorsApi.getAll).toHaveBeenCalledWith({ page: 1, limit: 10, search: undefined });
       expect(mockedAuthorsApi.create).toHaveBeenCalledWith(newAuthorData);
     });
 
@@ -116,19 +134,21 @@ describe('useAuthors', () => {
       const updatedAuthor = { id: 1, ...updateData, full_name: 'Jane Doe' };
       
       mockedAuthorsApi.update.mockResolvedValue(updatedAuthor);
+      mockedAuthorsApi.getAll
+        .mockResolvedValueOnce(buildPaginatedResponse(existingAuthors))
+        .mockResolvedValueOnce(buildPaginatedResponse([updatedAuthor]));
 
       const { result } = renderHook(() => useAuthors(), { wrapper });
-      
-      // Set initial authors
-      act(() => {
-        result.current.authors.push(...existingAuthors);
+
+      await act(async () => {
+        await result.current.fetchAuthors();
       });
 
       await act(async () => {
         await result.current.updateAuthor(1, updateData);
       });
 
-      expect(result.current.authors).toContainEqual(updatedAuthor);
+      expect(result.current.authors).toEqual([updatedAuthor]);
       expect(mockedAuthorsApi.update).toHaveBeenCalledWith(1, updateData);
     });
   });
@@ -141,20 +161,28 @@ describe('useAuthors', () => {
       ];
       
       mockedAuthorsApi.delete.mockResolvedValue({ message: 'Author deleted successfully' });
+      mockedAuthorsApi.getAll
+        .mockResolvedValueOnce(buildPaginatedResponse(existingAuthors))
+        .mockResolvedValueOnce(buildPaginatedResponse([existingAuthors[1]], {
+          total_items: 1,
+          total_pages: 1,
+          current_page: 1,
+          has_prev: false,
+          has_next: false,
+        }));
 
       const { result } = renderHook(() => useAuthors(), { wrapper });
-      
-      // Manually set initial state for this test
-      act(() => {
-        result.current.authors.splice(0, result.current.authors.length, ...existingAuthors);
+
+      await act(async () => {
+        await result.current.fetchAuthors();
       });
 
       await act(async () => {
         await result.current.deleteAuthor(1);
       });
 
-      expect(result.current.authors).not.toContainEqual(existingAuthors[0]);
-      expect(result.current.authors).toHaveLength(1);
+      expect(result.current.authors).toEqual([existingAuthors[1]]);
+      expect(result.current.pagination.total_items).toBe(1);
       expect(mockedAuthorsApi.delete).toHaveBeenCalledWith(1);
     });
   });
@@ -165,7 +193,11 @@ describe('useAuthors', () => {
         { id: 1, first_name: 'John', last_name: 'Doe', full_name: 'John Doe' }
       ];
       
-      mockedAuthorsApi.search.mockResolvedValue(searchResults);
+      mockedAuthorsApi.search.mockResolvedValue(buildPaginatedResponse(searchResults, {
+        current_page: 1,
+        total_pages: 1,
+        total_items: 1,
+      }));
 
       const { result } = renderHook(() => useAuthors(), { wrapper });
 
@@ -174,7 +206,8 @@ describe('useAuthors', () => {
       });
 
       expect(result.current.authors).toEqual(searchResults);
-      expect(mockedAuthorsApi.search).toHaveBeenCalledWith('John');
+      expect(result.current.pagination.total_items).toBe(1);
+      expect(mockedAuthorsApi.search).toHaveBeenCalledWith('John', { page: 1, limit: 10 });
     });
   });
 

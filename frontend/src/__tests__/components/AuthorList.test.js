@@ -21,10 +21,22 @@ const TestWrapper = ({ children }) => (
 );
 
 describe('AuthorList', () => {
+  const defaultPagination = {
+    current_page: 1,
+    total_pages: 1,
+    total_items: 0,
+    per_page: 10,
+    has_next: false,
+    has_prev: false,
+    next_page: null,
+    prev_page: null,
+  };
+
   const defaultMockHook = {
     authors: [],
     loading: false,
     error: null,
+    pagination: defaultPagination,
     fetchAuthors: jest.fn(),
     deleteAuthor: jest.fn(),
     searchAuthors: jest.fn()
@@ -157,7 +169,7 @@ describe('AuthorList', () => {
       );
 
       // Check table headers
-      expect(screen.getByText('ID')).toBeInTheDocument();
+      expect(screen.getByText('#')).toBeInTheDocument();
       expect(screen.getByText('Name')).toBeInTheDocument();
       expect(screen.getByText('First Name')).toBeInTheDocument();
       expect(screen.getByText('Last Name')).toBeInTheDocument();
@@ -182,13 +194,18 @@ describe('AuthorList', () => {
         </TestWrapper>
       );
 
-      expect(screen.getByText('Showing 2 authors')).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /view/i })).toHaveLength(2);
     });
 
     it('should show singular count for one author', () => {
       mockedUseAuthors.mockReturnValue({
         ...defaultMockHook,
-        authors: [mockAuthors[0]]
+        authors: [mockAuthors[0]],
+        pagination: {
+          ...defaultPagination,
+          total_items: 1,
+          total_pages: 1,
+        }
       });
 
       render(
@@ -197,7 +214,8 @@ describe('AuthorList', () => {
         </TestWrapper>
       );
 
-      expect(screen.getByText('Showing 1 author')).toBeInTheDocument();
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      expect(screen.getByText('1')).toBeInTheDocument();
     });
   });
 
@@ -271,7 +289,7 @@ describe('AuthorList', () => {
       await user.click(clearButton);
 
       expect(searchInput).toHaveValue('');
-      expect(mockFetchAuthors).toHaveBeenCalledTimes(2); // Once on mount, once on clear
+      expect(mockFetchAuthors).toHaveBeenLastCalledWith({ page: 1, limit: 10, search: undefined });
     });
 
     it('should fetch all authors when searching with empty term', async () => {
@@ -292,7 +310,7 @@ describe('AuthorList', () => {
       const searchButton = screen.getByRole('button', { name: /search/i });
       await user.click(searchButton);
 
-      expect(mockFetchAuthors).toHaveBeenCalledTimes(2); // Once on mount, once on empty search
+      expect(mockFetchAuthors).toHaveBeenLastCalledWith({ page: 1, limit: 10, search: undefined });
     });
   });
 
