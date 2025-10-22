@@ -71,6 +71,7 @@ describe('ArticleEdit', () => {
     renderComponent();
 
     await waitFor(() => expect(getArticle).toHaveBeenCalledWith('5'));
+    await waitFor(() => expect(fetchAuthors).toHaveBeenCalledWith({ page: 1, limit: 100, search: undefined }));
     await waitForElementToBeRemoved(() => screen.getByText(/loading article details/i));
 
     expect(screen.getByDisplayValue('Existing Article')).toBeInTheDocument();

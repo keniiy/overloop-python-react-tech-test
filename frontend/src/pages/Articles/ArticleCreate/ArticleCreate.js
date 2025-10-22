@@ -23,7 +23,7 @@ function ArticleCreate() {
     const [saveError, setSaveError] = useState(null);
 
     useEffect(() => {
-        fetchAuthors();
+        fetchAuthors({ page: 1, limit: 100, search: undefined });
     }, [fetchAuthors]);
 
     const handleAuthorChange = (event) => {

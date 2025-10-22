@@ -52,6 +52,7 @@ describe('ArticleList', () => {
     expect(screen.getByText('Jane Smith')).toBeInTheDocument();
     expect(screen.getByText('EMEA')).toBeInTheDocument();
     expect(screen.getByText(/page 1 of 1/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /view/i })).toHaveAttribute('href', '/articles/view/1');
   });
 
   it('shows placeholder when no articles exist', async () => {

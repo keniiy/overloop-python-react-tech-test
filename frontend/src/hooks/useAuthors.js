@@ -82,7 +82,6 @@ export const useAuthors = () => {
       const message = formatApiError(err, 'Failed to fetch authors');
       setError(message);
       showNotification(message, 'error');
-      throw err;
     } finally {
       setLoading(false);
     }
@@ -168,7 +167,6 @@ export const useAuthors = () => {
       const message = formatApiError(err, 'Failed to search authors');
       setError(message);
       showNotification(message, 'error');
-      throw err;
     } finally {
       setLoading(false);
     }

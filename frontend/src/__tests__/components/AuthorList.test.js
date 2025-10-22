@@ -79,7 +79,7 @@ describe('AuthorList', () => {
         </TestWrapper>
       );
 
-      expect(defaultMockHook.fetchAuthors).toHaveBeenCalledTimes(1);
+      expect(defaultMockHook.fetchAuthors).toHaveBeenCalledWith({ page: 1, limit: 10, search: undefined });
     });
   });
 
@@ -407,6 +407,8 @@ describe('AuthorList', () => {
         </TestWrapper>
       );
 
+      const viewButton = screen.getByRole('button', { name: /view/i });
+      expect(viewButton).toHaveAttribute('href', '/authors/view/1');
       const editButton = screen.getByRole('button', { name: /edit/i });
       expect(editButton).toHaveAttribute('href', '/authors/1');
     });

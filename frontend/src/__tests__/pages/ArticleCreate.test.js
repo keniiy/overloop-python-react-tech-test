@@ -62,7 +62,7 @@ describe('ArticleCreate', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(fetchAuthors).toHaveBeenCalledTimes(1);
+      expect(fetchAuthors).toHaveBeenCalledWith({ page: 1, limit: 100, search: undefined });
     });
   });
 
