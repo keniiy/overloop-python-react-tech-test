@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, waitForElementToBeRemoved } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -70,17 +70,13 @@ describe('ArticleEdit', () => {
 
     renderComponent();
 
-    await waitFor(() => {
-      expect(getArticle).toHaveBeenCalledWith('5');
-    });
+    await waitFor(() => expect(getArticle).toHaveBeenCalledWith('5'));
+    await waitForElementToBeRemoved(() => screen.getByText(/loading article details/i));
 
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('Existing Article')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Existing article content')).toBeInTheDocument();
-    });
-
+    expect(screen.getByDisplayValue('Existing Article')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Existing article content')).toBeInTheDocument();
     expect(fetchAuthors).toHaveBeenCalledTimes(1);
-    expect(screen.getByDisplayValue('2')).toBeInTheDocument();
+    expect(screen.getByRole('combobox')).toHaveValue('2');
   });
 
   it('updates article and navigates back on success', async () => {
@@ -97,9 +93,8 @@ describe('ArticleEdit', () => {
 
     renderComponent();
 
-    await waitFor(() => {
-      expect(getArticle).toHaveBeenCalled();
-    });
+    await waitFor(() => expect(getArticle).toHaveBeenCalled());
+    await waitForElementToBeRemoved(() => screen.getByText(/loading article details/i));
 
     await user.clear(screen.getByLabelText(/title/i));
     await user.type(screen.getByLabelText(/title/i), 'Updated Article');
@@ -107,18 +102,16 @@ describe('ArticleEdit', () => {
     await user.click(screen.getByRole('button', { name: /update regions/i }));
     await user.click(screen.getByRole('button', { name: /save article/i }));
 
-    await waitFor(() => {
+    await waitFor(() =>
       expect(editArticle).toHaveBeenCalledWith('5', {
         title: 'Updated Article',
         content: 'Existing article content',
         authorId: 2,
         regionIds: [2]
-      });
-    });
+      })
+    );
 
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/articles/list');
-    });
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/articles/list'));
   });
 
   it('shows error message when update fails', async () => {
@@ -135,15 +128,12 @@ describe('ArticleEdit', () => {
 
     renderComponent();
 
-    await waitFor(() => {
-      expect(getArticle).toHaveBeenCalled();
-    });
+    await waitFor(() => expect(getArticle).toHaveBeenCalled());
+    await waitForElementToBeRemoved(() => screen.getByText(/loading article details/i));
 
     await user.click(screen.getByRole('button', { name: /save article/i }));
 
-    await waitFor(() => {
-      expect(screen.getByText('Update failed')).toBeInTheDocument();
-    });
+    await waitFor(() => expect(screen.getByText('Update failed')).toBeInTheDocument());
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
@@ -153,8 +143,6 @@ describe('ArticleEdit', () => {
 
     renderComponent();
 
-    await waitFor(() => {
-      expect(screen.getByText(/error loading article/i)).toBeInTheDocument();
-    });
+    await waitFor(() => expect(screen.getByText(/error loading article/i)).toBeInTheDocument());
   });
 });

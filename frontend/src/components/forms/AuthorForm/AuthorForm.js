@@ -65,7 +65,7 @@ function AuthorForm({
         </Alert>
       )}
       
-      <Form.Group className="mb-3">
+      <Form.Group className="mb-3" controlId="authorFirstName">
         <Form.Label>First Name *</Form.Label>
         <Form.Control
           type="text"
@@ -81,7 +81,7 @@ function AuthorForm({
         </Form.Control.Feedback>
       </Form.Group>
 
-      <Form.Group className="mb-3">
+      <Form.Group className="mb-3" controlId="authorLastName">
         <Form.Label>Last Name *</Form.Label>
         <Form.Control
           type="text"
@@ -104,14 +104,13 @@ function AuthorForm({
           disabled={loading}
         >
           {loading && (
-            <Spinner
-              as="span"
-              animation="border"
-              size="sm"
-              role="status"
-              aria-hidden="true"
-              className="me-2"
-            />
+          <Spinner
+            as="span"
+            animation="border"
+            size="sm"
+            role="status"
+            className="me-2"
+          />
           )}
           {submitText}
         </Button>

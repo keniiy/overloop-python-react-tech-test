@@ -45,9 +45,8 @@ describe('ArticleList', () => {
 
     renderComponent();
 
-    await waitFor(() => {
-      expect(listArticles).toHaveBeenCalledWith({ page: 1, limit: 10 });
-    });
+    await waitFor(() => expect(listArticles).toHaveBeenCalledWith({ page: 1, limit: 10 }));
+    await waitFor(() => expect(screen.queryByText(/loading articles/i)).not.toBeInTheDocument());
 
     expect(screen.getByText('Article One')).toBeInTheDocument();
     expect(screen.getByText('Jane Smith')).toBeInTheDocument();
@@ -70,9 +69,8 @@ describe('ArticleList', () => {
 
     renderComponent();
 
-    await waitFor(() => {
-      expect(listArticles).toHaveBeenCalled();
-    });
+    await waitFor(() => expect(listArticles).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByText(/loading articles/i)).not.toBeInTheDocument());
 
     expect(screen.getByText(/no articles found/i)).toBeInTheDocument();
   });
@@ -110,15 +108,13 @@ describe('ArticleList', () => {
 
     renderComponent();
 
-    await waitFor(() => {
-      expect(listArticles).toHaveBeenCalledWith({ page: 1, limit: 10 });
-    });
+    await waitFor(() => expect(listArticles).toHaveBeenCalledWith({ page: 1, limit: 10 }));
+    await waitFor(() => expect(screen.queryByText(/loading articles/i)).not.toBeInTheDocument());
 
     await user.click(screen.getByRole('button', { name: /next/i }));
 
-    await waitFor(() => {
-      expect(listArticles).toHaveBeenLastCalledWith({ page: 2, limit: 10 });
-    });
+    await waitFor(() => expect(listArticles).toHaveBeenLastCalledWith({ page: 2, limit: 10 }));
+    await waitFor(() => expect(screen.queryByText(/loading articles/i)).not.toBeInTheDocument());
     expect(screen.getByText('Article Two')).toBeInTheDocument();
   });
 
@@ -127,8 +123,6 @@ describe('ArticleList', () => {
 
     renderComponent();
 
-    await waitFor(() => {
-      expect(screen.getByText(/failed to load articles/i)).toBeInTheDocument();
-    });
+    await waitFor(() => expect(screen.getByText('Network error')).toBeInTheDocument());
   });
 });

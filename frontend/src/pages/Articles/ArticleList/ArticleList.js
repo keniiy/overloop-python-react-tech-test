@@ -6,8 +6,8 @@ import Spinner from 'react-bootstrap/Spinner';
 import Alert from 'react-bootstrap/Alert';
 import Badge from 'react-bootstrap/Badge';
 
-import { ROUTE_ARTICLE_PREFIX, ROUTE_ARTICLE_CREATE } from '../../constants';
-import { listArticles } from '../../services/articles';
+import { ROUTE_ARTICLE_PREFIX, ROUTE_ARTICLE_CREATE } from '../../../constants';
+import { listArticles } from '../../../services/articles';
 
 const DEFAULT_LIMIT = 10;
 

@@ -5,10 +5,10 @@ import Button from 'react-bootstrap/Button';
 import Spinner from 'react-bootstrap/Spinner';
 import Alert from 'react-bootstrap/Alert';
 
-import { ROUTE_ARTICLE_LIST } from '../../constants';
-import { getArticle, editArticle } from '../../services/articles';
-import RegionDropdown from '../../components/RegionDropdown/RegionDropdown';
-import { useAuthors } from '../../hooks/useAuthors';
+import { ROUTE_ARTICLE_LIST } from '../../../constants';
+import { getArticle, editArticle } from '../../../services/articles';
+import RegionDropdown from '../../../components/RegionDropdown/RegionDropdown';
+import { useAuthors } from '../../../hooks/useAuthors';
 
 function ArticleEdit() {
     const navigate = useNavigate();
@@ -115,20 +115,20 @@ function ArticleEdit() {
                 </Alert>
             )}
             <Form onSubmit={ handleSave }>
-                <Form.Group className="mb-3">
-                    <Form.Label>Title</Form.Label>
-                    <Form.Control
-                        type="text"
+            <Form.Group className="mb-3" controlId="articleTitle">
+                <Form.Label>Title</Form.Label>
+                <Form.Control
+                    type="text"
                         placeholder="Title"
                         value={ title }
                         onChange={ (event) => setTitle(event.target.value) }
                         required
                     />
                 </Form.Group>
-                <Form.Group className="mb-3">
-                    <Form.Label>Content</Form.Label>
-                    <Form.Control
-                        as="textarea"
+            <Form.Group className="mb-3" controlId="articleContent">
+                <Form.Label>Content</Form.Label>
+                <Form.Control
+                    as="textarea"
                         placeholder="Content"
                         rows="5"
                         value={ content }
@@ -136,10 +136,10 @@ function ArticleEdit() {
                         required
                     />
                 </Form.Group>
-                <Form.Group className="mb-3">
-                    <Form.Label>Author</Form.Label>
-                    <Form.Select
-                        value={ authorId ?? '' }
+            <Form.Group className="mb-3" controlId="articleAuthor">
+                <Form.Label>Author</Form.Label>
+                <Form.Select
+                    value={ authorId ?? '' }
                         onChange={ handleAuthorChange }
                         disabled={ authorsLoading }
                     >
@@ -157,7 +157,7 @@ function ArticleEdit() {
                         </div>
                     )}
                 </Form.Group>
-                <Form.Group className="mb-3">
+            <Form.Group className="mb-3" controlId="articleRegions">
                     <Form.Label>Regions</Form.Label>
                     <RegionDropdown
                         value={ regions }
@@ -171,7 +171,6 @@ function ArticleEdit() {
                             animation="border"
                             size="sm"
                             role="status"
-                            aria-hidden="true"
                             className="me-2"
                         />
                     )}

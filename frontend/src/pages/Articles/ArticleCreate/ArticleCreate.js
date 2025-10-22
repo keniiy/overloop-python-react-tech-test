@@ -5,10 +5,10 @@ import Button from 'react-bootstrap/Button';
 import Spinner from 'react-bootstrap/Spinner';
 import Alert from 'react-bootstrap/Alert';
 
-import { ROUTE_ARTICLE_LIST } from '../../constants';
-import { createArticle } from '../../services/articles';
-import RegionDropdown from '../../components/RegionDropdown/RegionDropdown';
-import { useAuthors } from '../../hooks/useAuthors';
+import { ROUTE_ARTICLE_LIST } from '../../../constants';
+import { createArticle } from '../../../services/articles';
+import RegionDropdown from '../../../components/RegionDropdown/RegionDropdown';
+import { useAuthors } from '../../../hooks/useAuthors';
 
 function ArticleCreate() {
     const navigate = useNavigate();
@@ -64,7 +64,7 @@ function ArticleCreate() {
                 </Alert>
             )}
             <Form onSubmit={ handleSave }>
-                <Form.Group className="mb-3">
+                <Form.Group className="mb-3" controlId="articleTitle">
                     <Form.Label>Title</Form.Label>
                     <Form.Control
                         type="text"
@@ -74,7 +74,7 @@ function ArticleCreate() {
                         required
                     />
                 </Form.Group>
-                <Form.Group className="mb-3">
+                <Form.Group className="mb-3" controlId="articleContent">
                     <Form.Label>Content</Form.Label>
                     <Form.Control
                         as="textarea"
@@ -85,7 +85,7 @@ function ArticleCreate() {
                         required
                     />
                 </Form.Group>
-                <Form.Group className="mb-3">
+                <Form.Group className="mb-3" controlId="articleAuthor">
                     <Form.Label>Author</Form.Label>
                     <Form.Select
                         value={ authorId ?? '' }
@@ -106,7 +106,7 @@ function ArticleCreate() {
                         </div>
                     )}
                 </Form.Group>
-                <Form.Group className="mb-3">
+                <Form.Group className="mb-3" controlId="articleRegions">
                     <Form.Label>Regions</Form.Label>
                     <RegionDropdown
                         value={ regions }
@@ -120,7 +120,6 @@ function ArticleCreate() {
                             animation="border"
                             size="sm"
                             role="status"
-                            aria-hidden="true"
                             className="me-2"
                         />
                     )}

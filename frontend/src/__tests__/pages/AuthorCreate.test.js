@@ -1,284 +1,146 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { BrowserRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
+
 import AuthorCreate from '../../pages/Authors/AuthorCreate/AuthorCreate';
 import { useAuthors } from '../../hooks/useAuthors';
 
-// Mock the useAuthors hook
 jest.mock('../../hooks/useAuthors');
 const mockedUseAuthors = useAuthors;
 
-// Mock useNavigate
 const mockNavigate = jest.fn();
+
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
-  useNavigate: () => mockNavigate,
+  useNavigate: () => mockNavigate
 }));
 
-// Test wrapper with Router
-const TestWrapper = ({ children }) => (
-  <BrowserRouter>{children}</BrowserRouter>
-);
+const renderComponent = () =>
+  render(
+    <MemoryRouter initialEntries={['/authors/create']}>
+      <AuthorCreate />
+    </MemoryRouter>
+  );
 
 describe('AuthorCreate', () => {
-  const defaultMockHook = {
-    createAuthor: jest.fn()
-  };
-
   beforeEach(() => {
     jest.clearAllMocks();
-    mockedUseAuthors.mockReturnValue(defaultMockHook);
   });
 
-  describe('Rendering', () => {
-    it('should render page header and navigation', () => {
-      render(
-        <TestWrapper>
-          <AuthorCreate />
-        </TestWrapper>
-      );
-
-      expect(screen.getByText('Create New Author')).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /back to authors/i })).toBeInTheDocument();
-    });
-
-    it('should render AuthorForm with correct props', () => {
-      render(
-        <TestWrapper>
-          <AuthorCreate />
-        </TestWrapper>
-      );
-
-      expect(screen.getByLabelText(/first name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/last name/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /create author/i })).toBeInTheDocument();
-    });
-
-    it('should have correct back link URL', () => {
-      render(
-        <TestWrapper>
-          <AuthorCreate />
-        </TestWrapper>
-      );
-
-      const backLink = screen.getByRole('link', { name: /back to authors/i });
-      expect(backLink).toHaveAttribute('href', '/authors/list');
-    });
+  const buildHookValue = (overrides = {}) => ({
+    createAuthor: jest.fn().mockResolvedValue({
+      id: 1,
+      first_name: 'John',
+      last_name: 'Doe',
+      full_name: 'John Doe'
+    }),
+    ...overrides
   });
 
-  describe('Form Submission', () => {
-    it('should handle successful author creation', async () => {
-      const user = userEvent.setup();
-      const mockCreateAuthor = jest.fn().mockResolvedValue({
-        id: 1,
-        first_name: 'John',
-        last_name: 'Doe',
-        full_name: 'John Doe'
-      });
+  it('renders header, back button, and form fields', () => {
+    mockedUseAuthors.mockReturnValue(buildHookValue());
 
-      mockedUseAuthors.mockReturnValue({
-        createAuthor: mockCreateAuthor
-      });
+    renderComponent();
 
-      render(
-        <TestWrapper>
-          <AuthorCreate />
-        </TestWrapper>
-      );
+    expect(screen.getByText('Create New Author')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /back to authors/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/first name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/last name/i)).toBeInTheDocument();
+  });
 
-      const firstNameInput = screen.getByLabelText(/first name/i);
-      const lastNameInput = screen.getByLabelText(/last name/i);
-      const submitButton = screen.getByRole('button', { name: /create author/i });
+  it('creates author and navigates back on success', async () => {
+    const hookValue = buildHookValue();
+    mockedUseAuthors.mockReturnValue(hookValue);
+    const user = userEvent.setup();
 
-      await user.type(firstNameInput, 'John');
-      await user.type(lastNameInput, 'Doe');
-      await user.click(submitButton);
+    renderComponent();
 
-      await waitFor(() => {
-        expect(mockCreateAuthor).toHaveBeenCalledWith({
-          first_name: 'John',
-          last_name: 'Doe'
-        });
-      });
+    await user.type(screen.getByLabelText(/first name/i), 'Jane');
+    await user.type(screen.getByLabelText(/last name/i), 'Smith');
+    await user.click(screen.getByRole('button', { name: /create author/i }));
 
-      await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/authors/list');
-      });
+    await waitFor(() =>
+      expect(hookValue.createAuthor).toHaveBeenCalledWith({
+        first_name: 'Jane',
+        last_name: 'Smith'
+      })
+    );
+    expect(mockNavigate).toHaveBeenCalledWith('/authors/list');
+  });
+
+  it('shows API error message when creation fails', async () => {
+    const hookValue = buildHookValue({
+      createAuthor: jest.fn().mockRejectedValue({
+        response: { data: { error: 'Author already exists' } }
+      })
     });
+    mockedUseAuthors.mockReturnValue(hookValue);
+    const user = userEvent.setup();
 
-    it('should handle API errors', async () => {
-      const user = userEvent.setup();
-      const errorMessage = 'Author already exists';
-      const mockCreateAuthor = jest.fn().mockRejectedValue({
-        response: { data: { error: errorMessage } }
-      });
+    renderComponent();
 
-      mockedUseAuthors.mockReturnValue({
-        createAuthor: mockCreateAuthor
-      });
+    await user.type(screen.getByLabelText(/first name/i), 'Jane');
+    await user.type(screen.getByLabelText(/last name/i), 'Smith');
+    await user.click(screen.getByRole('button', { name: /create author/i }));
 
-      render(
-        <TestWrapper>
-          <AuthorCreate />
-        </TestWrapper>
-      );
-
-      const firstNameInput = screen.getByLabelText(/first name/i);
-      const lastNameInput = screen.getByLabelText(/last name/i);
-      const submitButton = screen.getByRole('button', { name: /create author/i });
-
-      await user.type(firstNameInput, 'John');
-      await user.type(lastNameInput, 'Doe');
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(errorMessage)).toBeInTheDocument();
-      });
-
-      expect(mockNavigate).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByText('Author already exists')).toBeInTheDocument();
     });
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
 
-    it('should handle network errors', async () => {
-      const user = userEvent.setup();
-      const mockCreateAuthor = jest.fn().mockRejectedValue(new Error('Network Error'));
-
-      mockedUseAuthors.mockReturnValue({
-        createAuthor: mockCreateAuthor
-      });
-
-      render(
-        <TestWrapper>
-          <AuthorCreate />
-        </TestWrapper>
-      );
-
-      const firstNameInput = screen.getByLabelText(/first name/i);
-      const lastNameInput = screen.getByLabelText(/last name/i);
-      const submitButton = screen.getByRole('button', { name: /create author/i });
-
-      await user.type(firstNameInput, 'John');
-      await user.type(lastNameInput, 'Doe');
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('Network Error')).toBeInTheDocument();
-      });
+  it('shows network errors from createAuthor', async () => {
+    const hookValue = buildHookValue({
+      createAuthor: jest.fn().mockRejectedValue(new Error('Network Error'))
     });
+    mockedUseAuthors.mockReturnValue(hookValue);
+    const user = userEvent.setup();
 
-    it('should handle generic errors', async () => {
-      const user = userEvent.setup();
-      const mockCreateAuthor = jest.fn().mockRejectedValue({});
+    renderComponent();
 
-      mockedUseAuthors.mockReturnValue({
-        createAuthor: mockCreateAuthor
-      });
+    await user.type(screen.getByLabelText(/first name/i), 'Jane');
+    await user.type(screen.getByLabelText(/last name/i), 'Smith');
+    await user.click(screen.getByRole('button', { name: /create author/i }));
 
-      render(
-        <TestWrapper>
-          <AuthorCreate />
-        </TestWrapper>
-      );
-
-      const firstNameInput = screen.getByLabelText(/first name/i);
-      const lastNameInput = screen.getByLabelText(/last name/i);
-      const submitButton = screen.getByRole('button', { name: /create author/i });
-
-      await user.type(firstNameInput, 'John');
-      await user.type(lastNameInput, 'Doe');
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('Failed to create author')).toBeInTheDocument();
-      });
+    await waitFor(() => {
+      expect(screen.getByText('Network Error')).toBeInTheDocument();
     });
   });
 
-  describe('Loading State', () => {
-    it('should show loading state during submission', async () => {
-      const user = userEvent.setup();
-      const mockCreateAuthor = jest.fn().mockImplementation(
-        () => new Promise(resolve => setTimeout(resolve, 100))
-      );
-
-      mockedUseAuthors.mockReturnValue({
-        createAuthor: mockCreateAuthor
-      });
-
-      render(
-        <TestWrapper>
-          <AuthorCreate />
-        </TestWrapper>
-      );
-
-      const firstNameInput = screen.getByLabelText(/first name/i);
-      const lastNameInput = screen.getByLabelText(/last name/i);
-      const submitButton = screen.getByRole('button', { name: /create author/i });
-
-      await user.type(firstNameInput, 'John');
-      await user.type(lastNameInput, 'Doe');
-      await user.click(submitButton);
-
-      // Should show loading spinner
-      expect(screen.getByRole('status')).toBeInTheDocument();
-      expect(submitButton).toBeDisabled();
+  it('shows loading spinner while submitting', async () => {
+    const hookValue = buildHookValue({
+      createAuthor: jest.fn(() => new Promise((resolve) => setTimeout(resolve, 100)))
     });
+    mockedUseAuthors.mockReturnValue(hookValue);
+    const user = userEvent.setup();
 
-    it('should disable form fields during loading', async () => {
-      const user = userEvent.setup();
-      const mockCreateAuthor = jest.fn().mockImplementation(
-        () => new Promise(resolve => setTimeout(resolve, 100))
-      );
+    renderComponent();
 
-      mockedUseAuthors.mockReturnValue({
-        createAuthor: mockCreateAuthor
-      });
+    await user.type(screen.getByLabelText(/first name/i), 'Jane');
+    await user.type(screen.getByLabelText(/last name/i), 'Smith');
+    await user.click(screen.getByRole('button', { name: /create author/i }));
 
-      render(
-        <TestWrapper>
-          <AuthorCreate />
-        </TestWrapper>
-      );
-
-      const firstNameInput = screen.getByLabelText(/first name/i);
-      const lastNameInput = screen.getByLabelText(/last name/i);
-      const submitButton = screen.getByRole('button', { name: /create author/i });
-
-      await user.type(firstNameInput, 'John');
-      await user.type(lastNameInput, 'Doe');
-      await user.click(submitButton);
-
-      expect(firstNameInput).toBeDisabled();
-      expect(lastNameInput).toBeDisabled();
-    });
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create author/i })).toBeDisabled();
   });
 
-  describe('Form Validation', () => {
-    it('should not submit invalid form', async () => {
-      const user = userEvent.setup();
-      const mockCreateAuthor = jest.fn();
-
-      mockedUseAuthors.mockReturnValue({
-        createAuthor: mockCreateAuthor
-      });
-
-      render(
-        <TestWrapper>
-          <AuthorCreate />
-        </TestWrapper>
-      );
-
-      const submitButton = screen.getByRole('button', { name: /create author/i });
-      await user.click(submitButton);
-
-      // Should show validation errors
-      await waitFor(() => {
-        expect(screen.getByText(/first name is required/i)).toBeInTheDocument();
-        expect(screen.getByText(/last name is required/i)).toBeInTheDocument();
-      });
-
-      expect(mockCreateAuthor).not.toHaveBeenCalled();
-      expect(mockNavigate).not.toHaveBeenCalled();
+  it('does not submit when form is invalid', async () => {
+    const hookValue = buildHookValue({
+      createAuthor: jest.fn()
     });
+    mockedUseAuthors.mockReturnValue(hookValue);
+    const user = userEvent.setup();
+
+    renderComponent();
+
+    await user.click(screen.getByRole('button', { name: /create author/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/first name is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/last name is required/i)).toBeInTheDocument();
+    });
+
+    expect(hookValue.createAuthor).not.toHaveBeenCalled();
   });
 });

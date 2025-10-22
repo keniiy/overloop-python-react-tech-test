@@ -45,7 +45,7 @@ describe('AuthorList', () => {
       );
 
       expect(screen.getByText('Authors')).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /add new author/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /add new author/i })).toBeInTheDocument();
     });
 
     it('should render search form', () => {
@@ -389,8 +389,8 @@ describe('AuthorList', () => {
         </TestWrapper>
       );
 
-      const editLink = screen.getByRole('link', { name: /edit/i });
-      expect(editLink).toHaveAttribute('href', '/authors/1');
+      const editButton = screen.getByRole('button', { name: /edit/i });
+      expect(editButton).toHaveAttribute('href', '/authors/1');
     });
 
     it('should have correct add new author link', () => {
@@ -400,8 +400,8 @@ describe('AuthorList', () => {
         </TestWrapper>
       );
 
-      const addLink = screen.getByRole('link', { name: /add new author/i });
-      expect(addLink).toHaveAttribute('href', '/authors/create');
+      const addButton = screen.getByRole('button', { name: /add new author/i });
+      expect(addButton).toHaveAttribute('href', '/authors/create');
     });
   });
 });
