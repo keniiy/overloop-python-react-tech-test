@@ -3,4 +3,13 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom/extend-expect';
-jest.mock('axios');
+
+jest.mock('axios', () => require('./test/mocks/axios').default);
+
+const mockAxios = require('./test/mocks/axios').default;
+
+beforeEach(() => {
+  if (typeof mockAxios.__reset === 'function') {
+    mockAxios.__reset();
+  }
+});
