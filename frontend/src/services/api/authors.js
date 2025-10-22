@@ -1,11 +1,25 @@
 import client from './client';
 import { API_ENDPOINTS } from '../../config/api';
 
+const mapSearchParam = (search) => {
+  if (search === undefined || search === null) {
+    return {};
+  }
+  const trimmed = String(search).trim();
+  return trimmed.length > 0 ? { search: trimmed } : {};
+};
+
 // Authors API service following PROJECT_GUIDE.md structure
 export const authorsApi = {
-  // Get all authors
-  getAll: async () => {
-    const response = await client.get(API_ENDPOINTS.AUTHORS);
+  // Get all authors (supports pagination + search)
+  getAll: async (params = {}) => {
+    const response = await client.get(API_ENDPOINTS.AUTHORS, {
+      params: {
+        page: params.page,
+        limit: params.limit,
+        ...mapSearchParam(params.search)
+      }
+    });
     return response.data;
   },
 
@@ -33,12 +47,12 @@ export const authorsApi = {
     return response.data;
   },
 
-  // Search authors
-  search: async (searchTerm) => {
-    const response = await client.get(`${API_ENDPOINTS.AUTHORS}/search`, {
-      params: { q: searchTerm }
+  // Search authors (delegates to getAll with search param)
+  search: async (searchTerm, params = {}) => {
+    return authorsApi.getAll({
+      ...params,
+      search: searchTerm
     });
-    return response.data;
   },
 
   // Get authors with statistics

@@ -2,22 +2,27 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Container, Row, Col, Card, Button, Table, Spinner, Alert, Form } from 'react-bootstrap';
 import { useAuthors } from '../../../hooks/useAuthors';
-import { ROUTE_AUTHOR_CREATE, ROUTE_AUTHOR_EDIT } from '../../../constants';
+import { ROUTE_AUTHOR_CREATE, ROUTE_AUTHOR_EDIT, ROUTE_AUTHOR_VIEW } from '../../../constants';
+import PaginationControls from '../../../components/PaginationControls/PaginationControls';
 
 function AuthorList() {
-  const { authors, loading, error, fetchAuthors, deleteAuthor, searchAuthors } = useAuthors();
+  const DEFAULT_LIMIT = 10;
+  const { authors, loading, error, pagination, fetchAuthors, deleteAuthor, searchAuthors } = useAuthors();
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
-    fetchAuthors();
+    fetchAuthors({ page: 1, limit: DEFAULT_LIMIT, search: undefined });
   }, [fetchAuthors]);
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchTerm.trim()) {
-      searchAuthors(searchTerm);
+      searchAuthors(searchTerm.trim());
+      setPage(1);
     } else {
-      fetchAuthors();
+      fetchAuthors({ page: 1, limit: DEFAULT_LIMIT, search: undefined });
+      setPage(1);
     }
   };
 
@@ -32,6 +37,39 @@ function AuthorList() {
   };
 
   const editUrl = (authorId) => ROUTE_AUTHOR_EDIT.replace(':authorId', authorId);
+  const viewUrl = (authorId) => ROUTE_AUTHOR_VIEW.replace(':authorId', authorId);
+
+  const handlePrevPage = () => {
+    if (pagination?.has_prev) {
+      const targetPage = pagination.prev_page ?? Math.max(1, (pagination.current_page || 1) - 1);
+      fetchAuthors({
+        page: targetPage,
+        limit: pagination.per_page ?? DEFAULT_LIMIT,
+        search: searchTerm.trim() || undefined,
+      });
+      setPage(targetPage);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (pagination?.has_next) {
+      const targetPage = pagination.next_page ?? ((pagination.current_page || 1) + 1);
+      fetchAuthors({
+        page: targetPage,
+        limit: pagination.per_page ?? DEFAULT_LIMIT,
+        search: searchTerm.trim() || undefined,
+      });
+      setPage(targetPage);
+    }
+  };
+
+  const handleClear = () => {
+    setSearchTerm('');
+    fetchAuthors({ page: 1, limit: DEFAULT_LIMIT, search: undefined });
+    setPage(1);
+  };
+
+  const offset = ((pagination?.current_page || page) - 1) * (pagination?.per_page || DEFAULT_LIMIT);
 
   return (
     <Container className="mt-4">
@@ -58,16 +96,14 @@ function AuthorList() {
                   </Col>
                   <Col md={4}>
                     <div className="d-flex gap-2">
-                      <Button type="submit" variant="outline-primary">
+                      <Button type="submit" variant="outline-primary" disabled={ loading }>
                         Search
                       </Button>
                       <Button 
                         type="button" 
                         variant="outline-secondary"
-                        onClick={() => {
-                          setSearchTerm('');
-                          fetchAuthors();
-                        }}
+                        onClick={ handleClear }
+                        disabled={ loading }
                       >
                         Clear
                       </Button>
@@ -104,7 +140,7 @@ function AuthorList() {
                     <Table striped bordered hover responsive>
                       <thead>
                         <tr>
-                          <th>ID</th>
+                          <th>#</th>
                           <th>Name</th>
                           <th>First Name</th>
                           <th>Last Name</th>
@@ -112,14 +148,24 @@ function AuthorList() {
                         </tr>
                       </thead>
                       <tbody>
-                        {authors.map((author) => (
+                        {authors.map((author, index) => {
+                          const rowNumber = offset + index + 1;
+                          return (
                           <tr key={author.id}>
-                            <td>{author.id}</td>
+                            <td>{rowNumber}</td>
                             <td><strong>{author.full_name}</strong></td>
                             <td>{author.first_name}</td>
                             <td>{author.last_name}</td>
                             <td>
                               <div className="d-flex gap-2">
+                                <Button
+                                  as={Link}
+                                  to={viewUrl(author.id)}
+                                  variant="outline-secondary"
+                                  size="sm"
+                                >
+                                  View
+                                </Button>
                                 <Button
                                   as={Link}
                                   to={editUrl(author.id)}
@@ -138,16 +184,17 @@ function AuthorList() {
                               </div>
                             </td>
                           </tr>
-                        ))}
+                        );
+                        })}
                       </tbody>
                     </Table>
                   )}
-                  
-                  {authors.length > 0 && (
-                    <div className="mt-3 text-muted">
-                      Showing {authors.length} author{authors.length !== 1 ? 's' : ''}
-                    </div>
-                  )}
+                  <PaginationControls
+                    pagination={ pagination }
+                    onPrev={ handlePrevPage }
+                    onNext={ handleNextPage }
+                    disabled={ loading }
+                  />
                 </>
               )}
             </Card.Body>

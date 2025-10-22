@@ -6,8 +6,13 @@ import Spinner from 'react-bootstrap/Spinner';
 import Alert from 'react-bootstrap/Alert';
 import Badge from 'react-bootstrap/Badge';
 
-import { ROUTE_ARTICLE_PREFIX, ROUTE_ARTICLE_CREATE } from '../../../constants';
+import {
+    ROUTE_ARTICLE_CREATE,
+    ROUTE_ARTICLE_VIEW,
+    ROUTE_ARTICLE_EDIT,
+} from '../../../constants';
 import { listArticles } from '../../../services/articles';
+import PaginationControls from '../../../components/PaginationControls/PaginationControls';
 
 const DEFAULT_LIMIT = 10;
 
@@ -67,21 +72,25 @@ function ArticleList() {
         if (articles.length === 0) {
             return (
                 <tr>
-                    <td colSpan={ 3 } className="text-center text-muted py-4">
+                    <td colSpan={ 5 } className="text-center text-muted py-4">
                         No articles found.
                     </td>
                 </tr>
             );
         }
 
-        return articles.map((article) => {
+        const offset = (pagination.current_page - 1) * (pagination.per_page || DEFAULT_LIMIT);
+
+        return articles.map((article, index) => {
             const { id, title, author, regions } = article;
             const authorName = author?.full_name || (author ? `${author.first_name} ${author.last_name}` : '');
+            const rowNumber = offset + index + 1;
 
             return (
                 <tr key={ id }>
+                    <td>{rowNumber}</td>
                     <td className="fw-semibold">
-                        <Link to={ `${ROUTE_ARTICLE_PREFIX}/${id}` }>{ title }</Link>
+                        <Link to={ ROUTE_ARTICLE_VIEW.replace(':articleId', id) }>{ title }</Link>
                     </td>
                     <td>{ authorName || <span className="text-muted">No author</span> }</td>
                     <td className="text-nowrap">
@@ -94,6 +103,26 @@ function ArticleList() {
                         ) : (
                             <span className="text-muted">No regions</span>
                         )}
+                    </td>
+                    <td>
+                        <div className="d-flex gap-2">
+                            <Button
+                                as={Link}
+                                to={ ROUTE_ARTICLE_VIEW.replace(':articleId', id) }
+                                variant="outline-secondary"
+                                size="sm"
+                            >
+                                View
+                            </Button>
+                            <Button
+                                as={Link}
+                                to={ ROUTE_ARTICLE_EDIT.replace(':articleId', id) }
+                                variant="outline-primary"
+                                size="sm"
+                            >
+                                Edit
+                            </Button>
+                        </div>
                     </td>
                 </tr>
             );
@@ -121,15 +150,17 @@ function ArticleList() {
                 <Table striped bordered hover responsive="md">
                     <thead>
                         <tr>
+                            <th>#</th>
                             <th>Title</th>
                             <th>Author</th>
                             <th>Regions</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={ 3 } className="text-center py-4">
+                                <td colSpan={ 5 } className="text-center py-4">
                                     <Spinner animation="border" role="status">
                                         <span className="visually-hidden">Loading articles...</span>
                                     </Spinner>
@@ -143,27 +174,12 @@ function ArticleList() {
                 </Table>
             </div>
 
-            <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mt-3">
-                <div className="text-muted">
-                    Page {pagination.current_page} of {pagination.total_pages} · {pagination.total_items} total
-                </div>
-                <div className="d-flex gap-2">
-                    <Button
-                        variant="outline-secondary"
-                        onClick={ handlePrevPage }
-                        disabled={ !pagination.has_prev || loading }
-                    >
-                        Previous
-                    </Button>
-                    <Button
-                        variant="outline-secondary"
-                        onClick={ handleNextPage }
-                        disabled={ !pagination.has_next || loading }
-                    >
-                        Next
-                    </Button>
-                </div>
-            </div>
+            <PaginationControls
+                pagination={ pagination }
+                onPrev={ handlePrevPage }
+                onNext={ handleNextPage }
+                disabled={ loading }
+            />
         </div>
     );
 }
