@@ -9,6 +9,7 @@ import { ROUTE_ARTICLE_LIST } from '../../../constants';
 import { getArticle, editArticle } from '../../../services/articles';
 import RegionDropdown from '../../../components/RegionDropdown/RegionDropdown';
 import { useAuthors } from '../../../hooks/useAuthors';
+import { formatApiError } from '../../../utils/error';
 
 function ArticleEdit() {
     const navigate = useNavigate();
@@ -40,7 +41,8 @@ function ArticleEdit() {
                 setRegions(data.regions || []);
                 setAuthorId(data.author_id ?? null);
             } catch (fetchError) {
-                setError(fetchError.response?.data?.error || fetchError.message || 'Failed to load article');
+                const message = formatApiError(fetchError, 'Failed to load article');
+                setError(message);
             } finally {
                 setLoading(false);
             }
@@ -70,7 +72,8 @@ function ArticleEdit() {
             });
             navigate(ROUTE_ARTICLE_LIST);
         } catch (updateError) {
-            setSaveError(updateError.response?.data?.error || updateError.message || 'Failed to update article');
+            const message = formatApiError(updateError, 'Failed to update article');
+            setSaveError(message);
         } finally {
             setSaving(false);
         }

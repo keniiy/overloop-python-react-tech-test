@@ -4,6 +4,7 @@ import { Container, Row, Col, Card, Button, Spinner, Alert } from 'react-bootstr
 import AuthorForm from '../../../components/forms/AuthorForm/AuthorForm';
 import { useAuthors } from '../../../hooks/useAuthors';
 import { ROUTE_AUTHOR_LIST } from '../../../constants';
+import { formatApiError } from '../../../utils/error';
 
 function AuthorEdit() {
   const navigate = useNavigate();
@@ -25,7 +26,8 @@ function AuthorEdit() {
         const authorData = await getAuthorById(authorId);
         setAuthor(authorData);
       } catch (err) {
-        setError(err.response?.data?.error || err.message || 'Failed to fetch author');
+        const message = err.formattedMessage || formatApiError(err, 'Failed to fetch author');
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -44,7 +46,8 @@ function AuthorEdit() {
       await updateAuthor(authorId, authorData);
       navigate(ROUTE_AUTHOR_LIST);
     } catch (err) {
-      setSubmitError(err.response?.data?.error || err.message || 'Failed to update author');
+      const message = err.formattedMessage || formatApiError(err, 'Failed to update author');
+      setSubmitError(message);
     } finally {
       setSubmitLoading(false);
     }

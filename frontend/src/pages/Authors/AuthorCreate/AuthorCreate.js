@@ -4,6 +4,7 @@ import { Container, Row, Col, Card, Button } from 'react-bootstrap';
 import AuthorForm from '../../../components/forms/AuthorForm/AuthorForm';
 import { useAuthors } from '../../../hooks/useAuthors';
 import { ROUTE_AUTHOR_LIST } from '../../../constants';
+import { formatApiError } from '../../../utils/error';
 
 function AuthorCreate() {
   const navigate = useNavigate();
@@ -19,7 +20,8 @@ function AuthorCreate() {
       await createAuthor(authorData);
       navigate(ROUTE_AUTHOR_LIST);
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Failed to create author');
+      const message = err.formattedMessage || formatApiError(err, 'Failed to create author');
+      setError(message);
     } finally {
       setLoading(false);
     }

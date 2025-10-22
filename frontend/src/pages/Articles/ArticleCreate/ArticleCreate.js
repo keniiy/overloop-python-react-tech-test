@@ -9,6 +9,7 @@ import { ROUTE_ARTICLE_LIST } from '../../../constants';
 import { createArticle } from '../../../services/articles';
 import RegionDropdown from '../../../components/RegionDropdown/RegionDropdown';
 import { useAuthors } from '../../../hooks/useAuthors';
+import { formatApiError } from '../../../utils/error';
 
 function ArticleCreate() {
     const navigate = useNavigate();
@@ -44,7 +45,8 @@ function ArticleCreate() {
             });
             navigate(ROUTE_ARTICLE_LIST);
         } catch (error) {
-            setSaveError(error.response?.data?.error || error.message || 'Failed to create article');
+            const message = formatApiError(error, 'Failed to create article');
+            setSaveError(message);
         } finally {
             setSaving(false);
         }

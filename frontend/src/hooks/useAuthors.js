@@ -1,8 +1,19 @@
 import { useState, useCallback } from 'react';
 import { authorsApi } from '../services/api/authors';
 import { useNotification } from '../contexts/NotificationContext';
+import { formatApiError } from '../utils/error';
 
 // Custom hook for Authors following PROJECT_GUIDE.md structure
+const normaliseAuthorList = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  if (payload?.data && Array.isArray(payload.data)) {
+    return payload.data;
+  }
+  return [];
+};
+
 export const useAuthors = () => {
   const [authors, setAuthors] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -13,11 +24,12 @@ export const useAuthors = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await authorsApi.getAll();
-      setAuthors(data);
+      const payload = await authorsApi.getAll();
+      setAuthors(normaliseAuthorList(payload));
     } catch (err) {
-      setError(err.message);
-      showNotification('Failed to fetch authors', 'error');
+      const message = formatApiError(err, 'Failed to fetch authors');
+      setError(message);
+      showNotification(message, 'error');
     } finally {
       setLoading(false);
     }
@@ -30,7 +42,9 @@ export const useAuthors = () => {
       showNotification('Author created successfully', 'success');
       return newAuthor;
     } catch (err) {
-      showNotification('Failed to create author', 'error');
+      const message = formatApiError(err, 'Failed to create author');
+      showNotification(message, 'error');
+      err.formattedMessage = message;
       throw err;
     }
   }, [showNotification]);
@@ -44,7 +58,9 @@ export const useAuthors = () => {
       showNotification('Author updated successfully', 'success');
       return updatedAuthor;
     } catch (err) {
-      showNotification('Failed to update author', 'error');
+      const message = formatApiError(err, 'Failed to update author');
+      showNotification(message, 'error');
+      err.formattedMessage = message;
       throw err;
     }
   }, [showNotification]);
@@ -55,7 +71,9 @@ export const useAuthors = () => {
       setAuthors(prev => prev.filter(author => author.id !== id));
       showNotification('Author deleted successfully', 'success');
     } catch (err) {
-      showNotification('Failed to delete author', 'error');
+      const message = formatApiError(err, 'Failed to delete author');
+      showNotification(message, 'error');
+      err.formattedMessage = message;
       throw err;
     }
   }, [showNotification]);
@@ -64,11 +82,12 @@ export const useAuthors = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await authorsApi.search(searchTerm);
-      setAuthors(data);
+      const payload = await authorsApi.search(searchTerm);
+      setAuthors(normaliseAuthorList(payload));
     } catch (err) {
-      setError(err.message);
-      showNotification('Failed to search authors', 'error');
+      const message = formatApiError(err, 'Failed to search authors');
+      setError(message);
+      showNotification(message, 'error');
     } finally {
       setLoading(false);
     }
@@ -78,7 +97,9 @@ export const useAuthors = () => {
     try {
       return await authorsApi.getById(id);
     } catch (err) {
-      showNotification('Failed to fetch author', 'error');
+      const message = formatApiError(err, 'Failed to fetch author');
+      showNotification(message, 'error');
+      err.formattedMessage = message;
       throw err;
     }
   }, [showNotification]);
