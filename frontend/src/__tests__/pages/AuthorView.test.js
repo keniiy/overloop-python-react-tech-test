@@ -42,9 +42,10 @@ describe('AuthorView', () => {
     renderComponent();
 
     await waitFor(() => expect(getAuthorById).toHaveBeenCalledWith('4'));
-    expect(screen.getByText('Pat Jones')).toBeInTheDocument();
-    expect(screen.getByText('Pat')).toBeInTheDocument();
-    expect(screen.getByText('Jones')).toBeInTheDocument();
+
+    expect(await screen.findByText('Pat Jones')).toBeInTheDocument();
+    expect(await screen.findByText('Pat')).toBeInTheDocument();
+    expect(await screen.findByText('Jones')).toBeInTheDocument();
   });
 
   it('shows error state', async () => {
@@ -54,7 +55,7 @@ describe('AuthorView', () => {
 
     renderComponent();
 
-    await waitFor(() => expect(screen.getByText(/error loading author/i)).toBeInTheDocument());
-    expect(screen.getByText('Missing author')).toBeInTheDocument();
+    expect(await screen.findByText(/error loading author/i)).toBeInTheDocument();
+    expect(await screen.findByText('Missing author')).toBeInTheDocument();
   });
 });

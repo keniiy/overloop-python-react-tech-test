@@ -36,9 +36,10 @@ describe('ArticleView', () => {
     renderComponent();
 
     await waitFor(() => expect(getArticle).toHaveBeenCalledWith('5'));
-    expect(screen.getByText('Article Title')).toBeInTheDocument();
-    expect(screen.getByText(/ann lee/i)).toBeInTheDocument();
-    expect(screen.getByText('EMEA')).toBeInTheDocument();
+
+    expect(await screen.findByText('Article Title')).toBeInTheDocument();
+    expect(await screen.findByText(/ann lee/i)).toBeInTheDocument();
+    expect(await screen.findByText('EMEA')).toBeInTheDocument();
   });
 
   it('shows error state', async () => {
@@ -46,7 +47,7 @@ describe('ArticleView', () => {
 
     renderComponent();
 
-    await waitFor(() => expect(screen.getByText(/error loading article/i)).toBeInTheDocument());
-    expect(screen.getByText('Not found')).toBeInTheDocument();
+    expect(await screen.findByText(/error loading article/i)).toBeInTheDocument();
+    expect(await screen.findByText('Not found')).toBeInTheDocument();
   });
 });
